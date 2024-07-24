@@ -1,11 +1,13 @@
 import queue
 import warnings
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
 import mattermostautodriver
 from aiohttp.client import ClientSession
 
+from mmpy_bot.custom_client import CustomClient
 from mmpy_bot.threadpool import ThreadPool
 from mmpy_bot.webhook_server import WebHookServer
 from mmpy_bot.wrappers import Message, WebHookEvent
@@ -22,11 +24,19 @@ class Driver(mattermostautodriver.Driver):
         Arguments:
         - num_threads: int, number of threads to use for the default worker threadpool.
         """
+        options = args[0]
+
         super().__init__(*args, **kwargs)
         self.threadpool = ThreadPool(num_workers=num_threads)
         # Queue to communicate with the WebHookServer
         self.response_queue: Optional[queue.Queue] = None
         self.webhook_url = None
+
+        self.client = CustomClient(
+            self.options,
+            request_timeout=options.get("request_timeout_custom", 5),
+            request_timeout_files=options.get("request_timeout_files", 60)
+        )
 
     def login(self, *args, **kwargs):
         super().login(*args, **kwargs)
@@ -56,7 +66,8 @@ class Driver(mattermostautodriver.Driver):
             file_paths = []
 
         file_ids = (
-            self.upload_files(file_paths, channel_id) if len(file_paths) > 0 else []
+            self.upload_files(file_paths, channel_id) if len(
+                file_paths) > 0 else []
         )
 
         post = dict(
@@ -79,7 +90,8 @@ class Driver(mattermostautodriver.Driver):
 
     def get_thread(self, post_id: str):
         warnings.warn(
-            "get_thread is deprecated. Use get_post_thread instead", DeprecationWarning
+            "get_thread is deprecated. Use get_post_thread instead",
+            DeprecationWarning
         )
         return self.get_post_thread(post_id)
 
@@ -154,6 +166,12 @@ class Driver(mattermostautodriver.Driver):
 
         return self.create_post(**reply_args)
 
+    @lru_cache
+    def get_direct_channel(self, receiver_id: str) -> str:
+        return self.channels.create_direct_channel(
+            [self.user_id, receiver_id]
+        )["id"]
+
     def direct_message(
         self,
         receiver_id: str,
@@ -165,9 +183,7 @@ class Driver(mattermostautodriver.Driver):
     ):
         # Private/direct messages are sent to a special channel that
         # includes the bot and the recipient
-        direct_id = self.channels.create_direct_channel([self.user_id, receiver_id])[
-            "id"
-        ]
+        direct_id = self.get_direct_channel(receiver_id)
 
         return self.create_post(
             channel_id=direct_id,
@@ -186,7 +202,8 @@ class Driver(mattermostautodriver.Driver):
     async def trigger_own_webhook(self, webhook_id: str, data: Dict):
         """Triggers a a webhook with id webhook_id on the running WebHookServer."""
         if not self.webhook_url:
-            raise ValueError("The Driver is not aware of any running webhook server!")
+            raise ValueError(
+                "The Driver is not aware of any running webhook server!")
 
         async with ClientSession() as session:
             return await session.post(

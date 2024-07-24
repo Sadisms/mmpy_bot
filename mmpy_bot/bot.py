@@ -30,7 +30,11 @@ class Bot:
         settings: Optional[Settings] = None,
         plugins: Optional[Union[List[Plugin], PluginManager]] = None,
         enable_logging: bool = True,
-        log_post: bool = True
+        log_post: bool = True,
+        num_threads: int = 10,
+        run_scheduler: bool = False,
+        request_timeout: int = 5,
+        request_timeout_files: int = 60,
     ):
         self._setup_plugin_manager(plugins)
 
@@ -38,6 +42,8 @@ class Bot:
         self.settings = settings or Settings()
 
         self.console = None
+
+        self.run_scheduler = run_scheduler
 
         if enable_logging:
             self._register_logger()
@@ -52,8 +58,11 @@ class Bot:
                 "basepath": self.settings.MATTERMOST_API_PATH,
                 "keepalive": True,
                 "connect_kw_args": {"ping_interval": None},
+                "request_timeout_custom": request_timeout,
+                "request_timeout_files": request_timeout_files,
             }
         )
+        self.driver.threadpool.num_workers = num_threads
         self.driver.login()
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(
@@ -119,10 +128,13 @@ class Bot:
             self.running = True
 
             self.driver.threadpool.start()
+
             # Start a thread to run potential scheduled jobs
-            self.driver.threadpool.start_scheduler_thread(
-                self.settings.SCHEDULER_PERIOD
-            )
+            if self.run_scheduler:
+                self.driver.threadpool.start_scheduler_thread(
+                    self.settings.SCHEDULER_PERIOD
+                )
+
             # Start the webhook server on a separate thread if necessary
             if self.settings.WEBHOOK_HOST_ENABLED:
                 self.driver.threadpool.start_webhook_server_thread(self.webhook_server)
