@@ -35,7 +35,8 @@ class Driver(mattermostautodriver.Driver):
         self.client = CustomClient(
             self.options,
             request_timeout=options.get("request_timeout_custom", 5),
-            request_timeout_files=options.get("request_timeout_files", 60)
+            request_timeout_files=options.get("request_timeout_files", 60),
+            count_request_attempts=options.get("count_request_attempts", 5)
         )
 
     def login(self, *args, **kwargs):

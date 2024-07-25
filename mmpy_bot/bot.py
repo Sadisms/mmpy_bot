@@ -35,6 +35,7 @@ class Bot:
         run_scheduler: bool = False,
         request_timeout: int = 5,
         request_timeout_files: int = 60,
+        count_request_attempts: int = 5
     ):
         self._setup_plugin_manager(plugins)
 
@@ -60,6 +61,7 @@ class Bot:
                 "connect_kw_args": {"ping_interval": None},
                 "request_timeout_custom": request_timeout,
                 "request_timeout_files": request_timeout_files,
+                "count_request_attempts": count_request_attempts
             }
         )
         self.driver.threadpool.num_workers = num_threads

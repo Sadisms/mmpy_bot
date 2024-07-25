@@ -10,12 +10,14 @@ class CustomClient(Client):
         self,
         options,
         request_timeout: int = 5,
-        request_timeout_files: int = 60
+        request_timeout_files: int = 60,
+        count_request_attempts: int = 5
     ):
         super().__init__(options)
 
         self.request_timeout_custom = request_timeout
         self.request_timeout_files = request_timeout_files
+        self.count_request_attempts = count_request_attempts
 
     def make_request(self, method, endpoint, options=None, params=None, data=None, files=None, basepath=None):
         count_execute = 0
@@ -33,7 +35,7 @@ class CustomClient(Client):
                 return response
 
             except ConnectTimeout as e:
-                if count_execute < 5:
+                if count_execute < self.count_request_attempts:
                     count_execute += 1
                     continue
 
