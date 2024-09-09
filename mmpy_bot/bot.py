@@ -57,7 +57,6 @@ class Bot:
                 "connect_kw_args": {"ping_interval": None},
             }
         )
-        self.driver.login()
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(
             self.driver,
@@ -116,8 +115,9 @@ class Bot:
             self.event_handler._check_queue_loop(self.webhook_server.event_queue)
         )
 
-    def run(self):
+    async def run(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
+        await self.driver.login()
         try:
             self.running = True
 
