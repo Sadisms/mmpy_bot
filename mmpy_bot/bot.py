@@ -137,7 +137,7 @@ class Bot:
             self.plugin_manager.start()
 
             # Start listening for events
-            self.event_handler.start()
+            await self.event_handler.start()
 
         except KeyboardInterrupt as e:
             raise e
