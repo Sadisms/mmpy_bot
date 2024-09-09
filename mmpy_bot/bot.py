@@ -66,9 +66,6 @@ class Bot:
         )
         self.webhook_server = None
 
-        if self.settings.WEBHOOK_HOST_ENABLED:
-            self._initialize_webhook_server()
-
         self.running = False
 
     def _setup_plugin_manager(self, plugins):
@@ -104,16 +101,14 @@ class Bot:
             )
             logging.getLogger("").addHandler(self.console)
 
-    def _initialize_webhook_server(self):
+    async def _initialize_webhook_server(self):
         self.webhook_server = WebHookServer(
             url=self.settings.WEBHOOK_HOST_URL, port=self.settings.WEBHOOK_HOST_PORT
         )
         self.driver.register_webhook_server(self.webhook_server)
         # Schedule the queue loop to the current event loop so that it starts together
         # with self.init_websocket.
-        asyncio.get_event_loop().create_task(
-            self.event_handler._check_queue_loop(self.webhook_server.event_queue)
-        )
+        await self.event_handler._check_queue_loop(self.webhook_server.event_queue)
 
     async def run(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
@@ -131,6 +126,7 @@ class Bot:
 
             # Start the webhook server on a separate thread if necessary
             if self.settings.WEBHOOK_HOST_ENABLED:
+                await self._initialize_webhook_server()
                 self.driver.threadpool.start_webhook_server_thread(self.webhook_server)
 
             # Trigger "start" methods on every plugin
