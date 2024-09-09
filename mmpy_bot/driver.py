@@ -56,7 +56,7 @@ class Driver(mattermostautodriver.AsyncDriver):
             file_paths = []
 
         file_ids = (
-            self.upload_files(file_paths, channel_id) if len(
+            await self.upload_files(file_paths, channel_id) if len(
                 file_paths) > 0 else []
         )
 
@@ -76,7 +76,7 @@ class Driver(mattermostautodriver.AsyncDriver):
                 }
             )
 
-        return self.posts.create_post(post)
+        return await self.posts.create_post(post)
 
     async def get_thread(self, post_id: str):
         warnings.warn(
