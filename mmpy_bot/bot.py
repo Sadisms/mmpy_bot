@@ -3,7 +3,7 @@ import logging
 import sys
 from typing import List, Optional, Union
 
-from mmpy_bot.driver import Driver, AsyncDriver
+from mmpy_bot.driver import Driver
 from mmpy_bot.event_handler import EventHandler
 from mmpy_bot.plugins import (
     ExamplePlugin,
@@ -33,9 +33,7 @@ class Bot:
         log_post: bool = True,
         run_scheduler: bool = False,
         num_threads: int = 10,
-        is_async_driver: bool = False
     ):
-        self.is_async_driver = is_async_driver
         self._setup_plugin_manager(plugins)
 
         # Use default settings if none were specified.
@@ -48,23 +46,18 @@ class Bot:
         if enable_logging:
             self._register_logger()
 
-        driver_kwargs =  {
-            "url": self.settings.MATTERMOST_URL,
-            "port": self.settings.MATTERMOST_PORT,
-            "token": self.settings.BOT_TOKEN,
-            "scheme": self.settings.SCHEME,
-            "verify": self.settings.SSL_VERIFY,
-            "basepath": self.settings.MATTERMOST_API_PATH,
-            "keepalive": True,
-            "connect_kw_args": {"ping_interval": None},
-        }
-
-        if is_async_driver:
-            self.driver = AsyncDriver(driver_kwargs)
-
-        else:
-            self.driver = Driver(driver_kwargs)
-
+        self.driver = Driver(
+            {
+                "url": self.settings.MATTERMOST_URL,
+                "port": self.settings.MATTERMOST_PORT,
+                "token": self.settings.BOT_TOKEN,
+                "scheme": self.settings.SCHEME,
+                "verify": self.settings.SSL_VERIFY,
+                "basepath": self.settings.MATTERMOST_API_PATH,
+                "keepalive": True,
+                "connect_kw_args": {"ping_interval": None},
+            }
+        )
         self.driver.threadpool.num_workers = num_threads
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(
@@ -121,16 +114,9 @@ class Bot:
             self.event_handler._check_queue_loop(self.webhook_server.event_queue)
         )
 
-    def run(self):
+    async def run(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
-        if self.is_async_driver:
-            asyncio.get_event_loop().run_until_complete(
-                self.driver.login()
-            )
-
-        else:
-            self.driver.login()
-
+        await self.driver.login()
         try:
             self.running = True
 
@@ -151,7 +137,7 @@ class Bot:
             self.plugin_manager.start()
 
             # Start listening for events
-            self.event_handler.start(self.is_async_driver)
+            await self.event_handler.start()
 
         except KeyboardInterrupt as e:
             raise e
