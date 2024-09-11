@@ -32,6 +32,7 @@ class Bot:
         enable_logging: bool = True,
         log_post: bool = True,
         run_scheduler: bool = False,
+        num_threads: int = 10
     ):
         self._setup_plugin_manager(plugins)
 
@@ -55,7 +56,8 @@ class Bot:
                 "basepath": self.settings.MATTERMOST_API_PATH,
                 "keepalive": True,
                 "connect_kw_args": {"ping_interval": None},
-            }
+            },
+            num_threads=num_threads
         )
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(
