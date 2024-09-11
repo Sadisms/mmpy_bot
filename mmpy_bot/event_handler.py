@@ -20,7 +20,7 @@ class EventHandler(object):
         settings: Settings,
         plugin_manager: PluginManager,
         ignore_own_messages=True,
-        log_post: bool = True
+        log_post: bool = True,
     ):
         """The EventHandler class takes care of the connection to mattermost and calling
         the appropriate response function to each event."""
@@ -32,9 +32,15 @@ class EventHandler(object):
 
         self._name_matcher = re.compile(rf"^@?{self.driver.username}[:,]?\s?")
 
-    async def start(self):
+    def start(self, is_async_driver: bool):
         # This is blocking, will loop forever
-        await self.driver.init_websocket(self._handle_event)
+        if is_async_driver:
+            asyncio.get_event_loop().run_until_complete(
+                self.driver.init_websocket(self._handle_event)
+            )
+
+        else:
+            self.driver.init_websocket(self._handle_event)
 
     def _should_ignore(self, message: Message):
         # Ignore message from senders specified in settings, and maybe from ourself
