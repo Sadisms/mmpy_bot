@@ -52,8 +52,7 @@ class EventHandler(object):
                 event = webhook_queue.get_nowait()
                 await self._handle_webhook(event)
             except queue.Empty:
-                pass
-            await asyncio.sleep(.1)
+                await asyncio.sleep(.5)
 
     async def _handle_event(self, data):
         post = json.loads(data)
