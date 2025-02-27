@@ -31,11 +31,7 @@ class Bot:
         plugins: Optional[Union[List[Plugin], PluginManager]] = None,
         enable_logging: bool = True,
         log_post: bool = True,
-        num_threads: int = 10,
         run_scheduler: bool = False,
-        request_timeout: int = 5,
-        request_timeout_files: int = 60,
-        count_request_attempts: int = 5
     ):
         self._setup_plugin_manager(plugins)
 
@@ -59,12 +55,8 @@ class Bot:
                 "basepath": self.settings.MATTERMOST_API_PATH,
                 "keepalive": True,
                 "connect_kw_args": {"ping_interval": None},
-                "request_timeout_custom": request_timeout,
-                "request_timeout_files": request_timeout_files,
-                "count_request_attempts": count_request_attempts
             }
         )
-        self.driver.threadpool.num_workers = num_threads
         self.driver.login()
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(

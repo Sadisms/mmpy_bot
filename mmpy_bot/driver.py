@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Sequence, Union
 import mattermostautodriver
 from aiohttp.client import ClientSession
 
-from mmpy_bot.custom_client import CustomClient
 from mmpy_bot.threadpool import ThreadPool
 from mmpy_bot.webhook_server import WebHookServer
 from mmpy_bot.wrappers import Message, WebHookEvent
@@ -24,20 +23,11 @@ class Driver(mattermostautodriver.Driver):
         Arguments:
         - num_threads: int, number of threads to use for the default worker threadpool.
         """
-        options = args[0]
-
         super().__init__(*args, **kwargs)
         self.threadpool = ThreadPool(num_workers=num_threads)
         # Queue to communicate with the WebHookServer
         self.response_queue: Optional[queue.Queue] = None
         self.webhook_url = None
-
-        self.client = CustomClient(
-            self.options,
-            request_timeout=options.get("request_timeout_custom", 5),
-            request_timeout_files=options.get("request_timeout_files", 60),
-            count_request_attempts=options.get("count_request_attempts", 5)
-        )
 
     def login(self, *args, **kwargs):
         super().login(*args, **kwargs)
