@@ -39,6 +39,10 @@ class Message(EventWrapper):
         return self.body["data"]["channel_name"]
 
     @cached_property
+    def file_ids(self):
+        return self.body["data"]["post"].get("file_ids", [])
+
+    @cached_property
     def is_direct_message(self):
         return self.body["data"]["channel_type"] == "D"
 
@@ -48,7 +52,7 @@ class Message(EventWrapper):
 
     @cached_property
     def parent_id(self):
-        return self.body["data"]["post"]["parent_id"]
+        return self.body["data"]["post"].get("parent_id", "").strip()
 
     @cached_property
     def reply_id(self):
