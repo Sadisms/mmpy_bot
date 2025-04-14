@@ -83,6 +83,7 @@ class WebHookServer:
             except Empty:
                 await asyncio.sleep(.5)
 
+
     @handle_json_error
     async def process_webhook(self, request: web.Request):
         data = await request.json()
