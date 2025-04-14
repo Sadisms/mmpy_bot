@@ -1,6 +1,5 @@
 import queue
 import warnings
-from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
@@ -12,7 +11,7 @@ from mmpy_bot.webhook_server import WebHookServer
 from mmpy_bot.wrappers import Message, WebHookEvent
 
 
-class Driver(mattermostautodriver.Driver):
+class Driver(mattermostautodriver.AsyncDriver):
     user_id: str = ""
     username: str = ""
 
@@ -29,8 +28,8 @@ class Driver(mattermostautodriver.Driver):
         self.response_queue: Optional[queue.Queue] = None
         self.webhook_url = None
 
-    def login(self, *args, **kwargs):
-        super().login(*args, **kwargs)
+    async def login(self):
+        await super().login()
         self.user_id = self.client._userid
         self.username = self.client._username
 
@@ -38,7 +37,7 @@ class Driver(mattermostautodriver.Driver):
         self.response_queue = server.response_queue
         self.webhook_url = f"{server.url}:{server.port}/hooks"
 
-    def create_post(
+    async def create_post(
         self,
         channel_id: str,
         message: str,
@@ -57,7 +56,7 @@ class Driver(mattermostautodriver.Driver):
         props = props or {}
 
         file_ids = (
-            self.upload_files(file_paths, channel_id) if len(
+            await self.upload_files(file_paths, channel_id) if len(
                 file_paths) > 0 else []
         )
 
@@ -70,26 +69,26 @@ class Driver(mattermostautodriver.Driver):
         )
 
         if ephemeral_user_id:
-            return self.posts.create_post_ephemeral(
+            return await self.posts.create_post_ephemeral(
                 {
                     "user_id": ephemeral_user_id,
                     "post": post,
                 }
             )
 
-        return self.posts.create_post(post)
+        return await self.posts.create_post(post)
 
-    def get_thread(self, post_id: str):
+    async def get_thread(self, post_id: str):
         warnings.warn(
             "get_thread is deprecated. Use get_post_thread instead",
             DeprecationWarning
         )
-        return self.get_post_thread(post_id)
+        return await self.get_post_thread(post_id)
 
-    def get_post_thread(self, post_id: str):
+    async def get_post_thread(self, post_id: str):
         """Wrapper around driver.posts.get_post_thread, which for some reason returns
         duplicate and wrongly ordered entries in the ordered list."""
-        thread_info = self.posts.get_post_thread(post_id)
+        thread_info = await self.posts.get_post_thread(post_id)
 
         id_stamps = (
             (id, int(post["create_at"])) for id, post in thread_info["posts"].items()
@@ -100,13 +99,13 @@ class Driver(mattermostautodriver.Driver):
         thread_info["order"] = [id for id, stamp in sorted_stamps]
         return thread_info
 
-    def get_user_info(self, user_id: str):
+    async def get_user_info(self, user_id: str):
         """Returns a dictionary of user info."""
-        return self.users.get_user(user_id)
+        return await self.users.get_user(user_id)
 
-    def react_to(self, message: Message, emoji_name: str):
+    async def react_to(self, message: Message, emoji_name: str):
         """Adds an emoji reaction to the given message."""
-        return self.reactions.save_reaction(
+        return await self.reactions.save_reaction(
             {
                 "user_id": self.user_id,
                 "post_id": message.id,
@@ -114,7 +113,7 @@ class Driver(mattermostautodriver.Driver):
             },
         )
 
-    def reply_to(
+    async def reply_to(
         self,
         message: Message,
         response: str,
@@ -144,7 +143,7 @@ class Driver(mattermostautodriver.Driver):
                 ephemeral_user_id=message.user_id if ephemeral else None,
             )
 
-            return self.direct_message(**direct_args)
+            return await self.direct_message(**direct_args)
 
         reply_args = dict(
             channel_id=message.channel_id,
@@ -155,15 +154,14 @@ class Driver(mattermostautodriver.Driver):
             ephemeral_user_id=message.user_id if ephemeral else None,
         )
 
-        return self.create_post(**reply_args)
+        return await self.create_post(**reply_args)
 
-    @lru_cache
-    def get_direct_channel(self, receiver_id: str) -> str:
-        return self.channels.create_direct_channel(
+    async def get_direct_channel(self, receiver_id: str) -> str:
+        return (await self.channels.create_direct_channel(
             [self.user_id, receiver_id]
-        )["id"]
+        ))["id"]
 
-    def direct_message(
+    async def direct_message(
         self,
         receiver_id: str,
         message: str,
@@ -174,12 +172,9 @@ class Driver(mattermostautodriver.Driver):
     ):
         # Private/direct messages are sent to a special channel that
         # includes the bot and the recipient
-        direct_id = self.channels.create_direct_channel([self.user_id, receiver_id])[
-            "id"
-        ]
-        props = props or {}
+        direct_id = await self.get_direct_channel(receiver_id)
 
-        return self.create_post(
+        return await self.create_post(
             channel_id=direct_id,
             message=message,
             root_id=root_id,
@@ -205,7 +200,7 @@ class Driver(mattermostautodriver.Driver):
                 json=data,
             )
 
-    def upload_files(
+    async def upload_files(
         self, file_paths: Sequence[Union[str, Path]], channel_id: str
     ) -> List[str]:
         """Given a list of file paths and the channel id, uploads the corresponding
@@ -223,7 +218,7 @@ class Driver(mattermostautodriver.Driver):
             for path in file_paths
         ]
 
-        result = self.files.upload_file(
+        result = await self.files.upload_file(
             files=file_list, data={"channel_id": channel_id}
         )
         return [info["id"] for info in result["file_infos"]]

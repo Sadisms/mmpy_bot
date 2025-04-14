@@ -81,7 +81,8 @@ class WebHookServer:
                     # If this handler already received a response, we can skip this.
                     pass
             except Empty:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(.5)
+
 
     @handle_json_error
     async def process_webhook(self, request: web.Request):
