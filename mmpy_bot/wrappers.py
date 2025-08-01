@@ -140,3 +140,28 @@ class ActionEvent(WebHookEvent):
     @cached_property
     def user_name(self):
         return self.body.get("user_name")
+
+
+class DialogEvent(EventWrapper):
+    """Wrapper around an incoming dialog event."""
+
+    def __init__(
+        self,
+        *args,
+        webhook_id: str,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.webhook_id = webhook_id
+        
+    @cached_property
+    def dialog_id(self):
+        return self.body.get("dialog_id")
+
+    @cached_property
+    def updated_field(self):
+        return self.body.get("updated_field")
+
+    @cached_property
+    def submission(self):
+        return self.body.get("submission")

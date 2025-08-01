@@ -12,7 +12,7 @@ import click
 
 from mmpy_bot.utils import completed_future
 from mmpy_bot.webhook_server import NoResponse
-from mmpy_bot.wrappers import Message, WebHookEvent
+from mmpy_bot.wrappers import DialogEvent, Message, WebHookEvent
 
 if TYPE_CHECKING:
     from mmpy_bot.plugins import Plugin
@@ -285,6 +285,68 @@ def listen_webhook(
             **metadata,
         )
 
+        # Preserve docstring
+        new_func.__doc__ = func.__doc__
+        return new_func
+
+    return wrapped_func
+
+
+class DialogUpdateElementFunction(Function):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, event: DialogEvent):
+        self.function(self.plugin, event)
+
+
+def list_update_dialog_ellemnt(
+    regexp: str,
+    **metadata,
+):
+    def wrapped_func(func):
+        pattern = re.compile(regexp)
+        new_func = DialogUpdateElementFunction(
+            func,
+            matcher=pattern,
+            **metadata,
+        )
+
+        # Preserve docstring
+        new_func.__doc__ = func.__doc__
+        return new_func
+
+    return wrapped_func
+
+
+class DialogSubmitFunction(Function):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, event: DialogEvent):
+        self.function(self.plugin, event)
+
+
+def list_submit_dialog(
+    regexp: str,
+    **metadata,
+):
+    def wrapped_func(func):
+        pattern = re.compile(regexp)
+        new_func = DialogSubmitFunction(
+            func,
+            matcher=pattern,
+            **metadata,
+        )
+        
         # Preserve docstring
         new_func.__doc__ = func.__doc__
         return new_func
