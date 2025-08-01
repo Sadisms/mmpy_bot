@@ -1,5 +1,6 @@
 import queue
 import warnings
+from urllib.parse import urljoin
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
@@ -236,7 +237,7 @@ class Driver(mattermostautodriver.Driver):
         """Creates a custom dialog for the given user."""
 
         return self.client.post(
-            f"{plugin_base_url}/dialog",
+            urljoin(plugin_base_url, "/dialog"),
             options=dialog_data
         )
 
@@ -251,6 +252,6 @@ class Driver(mattermostautodriver.Driver):
 
         return self.client.make_request(
             "PATCH",
-            f"{plugin_base_url}/dialog/{dialog_id}",
+            urljoin(plugin_base_url, f"/dialog/{dialog_id}"),
             options=dialog_data
         )

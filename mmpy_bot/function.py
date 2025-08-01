@@ -304,7 +304,7 @@ class DialogUpdateElementFunction(Function):
         self.function(self.plugin, event)
 
 
-def list_update_dialog_ellemnt(
+def listen_update_dialog_ellemnt(
     regexp: str,
     **metadata,
 ):
@@ -335,7 +335,7 @@ class DialogSubmitFunction(Function):
         self.function(self.plugin, event)
 
 
-def list_submit_dialog(
+def listen_submit_dialog(
     regexp: str,
     **metadata,
 ):
