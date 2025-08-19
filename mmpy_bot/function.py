@@ -301,24 +301,42 @@ class DialogUpdateElementFunction(Function):
         super().__init__(*args, **kwargs)
 
     def __call__(self, event: DialogEvent):
-        # Signal the WebHookServer that we won't be sending a response.
-        def ensure_response(*args):
-            if not event.responded:
-                self.plugin.driver.respond_to_web(event, NoResponse)
-
-        # If this is a coroutine, wrap it in a task with ensure_response as callback
+        # If this is a coroutine, handle async response
         if self.is_coroutine:
-            task = asyncio.create_task(self.function(self.plugin, event))
-            task.add_done_callback(ensure_response)
+            async def handle_async_response():
+                try:
+                    result = await self.function(self.plugin, event)
+                    if result is not None and not event.responded:
+                        self.plugin.driver.respond_to_web(event, result)
+                    elif not event.responded:
+                        # For dialog update functions, return empty update by default
+                        default_response = {"update": {}}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                except Exception:
+                    log.exception("Exception occurred: ")
+                    if not event.responded:
+                        # For dialog update functions, return empty update by default
+                        default_response = {"update": {}}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                        
+            task = asyncio.create_task(handle_async_response())
             return task
 
-        # If not, simply call both of these functions
+        # If not, handle sync response
         try:
-            self.function(self.plugin, event)
+            result = self.function(self.plugin, event)
+            if result is not None and not event.responded:
+                self.plugin.driver.respond_to_web(event, result)
+            elif not event.responded:
+                # For dialog update functions, return empty update by default
+                default_response = {"update": {}}
+                self.plugin.driver.respond_to_web(event, default_response)
         except Exception:
             log.exception("Exception occurred: ")
-        finally:
-            return ensure_response()
+            if not event.responded:
+                # For dialog update functions, return empty update by default
+                default_response = {"update": {}}
+                self.plugin.driver.respond_to_web(event, default_response)
 
 
 def listen_update_dialog_ellemnt(
@@ -349,24 +367,34 @@ class DialogSubmitFunction(Function):
         super().__init__(*args, **kwargs)
 
     def __call__(self, event: DialogEvent):
-        # Signal the WebHookServer that we won't be sending a response.
-        def ensure_response(*args):
-            if not event.responded:
-                self.plugin.driver.respond_to_web(event, NoResponse)
-
-        # If this is a coroutine, wrap it in a task with ensure_response as callback
+        # If this is a coroutine, handle async response
         if self.is_coroutine:
-            task = asyncio.create_task(self.function(self.plugin, event))
-            task.add_done_callback(ensure_response)
+            async def handle_async_response():
+                try:
+                    result = await self.function(self.plugin, event)
+                    if result is not None and not event.responded:
+                        self.plugin.driver.respond_to_web(event, result)
+                    elif not event.responded:
+                        self.plugin.driver.respond_to_web(event, NoResponse)
+                except Exception:
+                    log.exception("Exception occurred: ")
+                    if not event.responded:
+                        self.plugin.driver.respond_to_web(event, NoResponse)
+                        
+            task = asyncio.create_task(handle_async_response())
             return task
 
-        # If not, simply call both of these functions
+        # If not, handle sync response
         try:
-            self.function(self.plugin, event)
+            result = self.function(self.plugin, event)
+            if result is not None and not event.responded:
+                self.plugin.driver.respond_to_web(event, result)
+            elif not event.responded:
+                self.plugin.driver.respond_to_web(event, NoResponse)
         except Exception:
             log.exception("Exception occurred: ")
-        finally:
-            return ensure_response()
+            if not event.responded:
+                self.plugin.driver.respond_to_web(event, NoResponse)
 
 
 def listen_submit_dialog(
