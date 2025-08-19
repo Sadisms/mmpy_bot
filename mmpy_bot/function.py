@@ -375,11 +375,15 @@ class DialogSubmitFunction(Function):
                     if result is not None and not event.responded:
                         self.plugin.driver.respond_to_web(event, result)
                     elif not event.responded:
-                        self.plugin.driver.respond_to_web(event, NoResponse)
+                        # For dialog submit functions, close dialog by default
+                        default_response = {"close": True}
+                        self.plugin.driver.respond_to_web(event, default_response)
                 except Exception:
                     log.exception("Exception occurred: ")
                     if not event.responded:
-                        self.plugin.driver.respond_to_web(event, NoResponse)
+                        # For dialog submit functions, close dialog by default
+                        default_response = {"close": True}
+                        self.plugin.driver.respond_to_web(event, default_response)
                         
             task = asyncio.create_task(handle_async_response())
             return task
@@ -390,11 +394,15 @@ class DialogSubmitFunction(Function):
             if result is not None and not event.responded:
                 self.plugin.driver.respond_to_web(event, result)
             elif not event.responded:
-                self.plugin.driver.respond_to_web(event, NoResponse)
+                # For dialog submit functions, close dialog by default
+                default_response = {"close": True}
+                self.plugin.driver.respond_to_web(event, default_response)
         except Exception:
             log.exception("Exception occurred: ")
             if not event.responded:
-                self.plugin.driver.respond_to_web(event, NoResponse)
+                # For dialog submit functions, close dialog by default
+                default_response = {"close": True}
+                self.plugin.driver.respond_to_web(event, default_response)
 
 
 def listen_submit_dialog(
