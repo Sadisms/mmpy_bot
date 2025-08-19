@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 from mmpy_bot.driver import Driver
-from mmpy_bot.function import Function, MessageFunction, WebHookFunction
+from mmpy_bot.function import DialogSubmitFunction, Function, MessageFunction, WebHookFunction
 from mmpy_bot.settings import Settings
 from mmpy_bot.utils import split_docstring
 from mmpy_bot.wrappers import EventWrapper
@@ -94,6 +94,8 @@ def get_function_characteristics(function):
         return (function.direct_only, function.needs_mention, "message")
     elif isinstance(function, WebHookFunction):
         return (False, False, "webhook")
+    elif isinstance(function, DialogSubmitFunction):
+        return (False, False, "dialog")
     else:
         raise NotImplementedError(
             f"Unknown/Unsupported listener type: '{type(function)}'"
@@ -175,6 +177,8 @@ class PluginManager:
                     if isinstance(function, MessageFunction):
                         self.message_listeners[function.matcher].append(function)
                     elif isinstance(function, WebHookFunction):
+                        self.webhook_listeners[function.matcher].append(function)
+                    elif isinstance(function, DialogSubmitFunction):
                         self.webhook_listeners[function.matcher].append(function)
                     else:
                         raise TypeError(
