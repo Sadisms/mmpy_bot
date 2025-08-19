@@ -236,7 +236,7 @@ class Driver(mattermostautodriver.Driver):
         """Creates a custom dialog for the given user."""
 
         return self.client.post(
-            plugin_base_url.rstrip("/") + "/dialog",
+            plugin_base_url.rstrip("/") + "/dialogs",
             options=dialog_data
         )
 
@@ -251,6 +251,6 @@ class Driver(mattermostautodriver.Driver):
 
         return self.client.make_request(
             "PATCH",
-            plugin_base_url.rstrip("/") + f"/dialog/{dialog_id}",
+            plugin_base_url.rstrip("/") + f"/dialogs/{dialog_id}",
             options=dialog_data
         )
