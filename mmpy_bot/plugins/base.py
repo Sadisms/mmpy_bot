@@ -8,10 +8,16 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 from mmpy_bot.driver import Driver
-from mmpy_bot.function import DialogSubmitFunction, Function, MessageFunction, WebHookFunction
 from mmpy_bot.settings import Settings
 from mmpy_bot.utils import split_docstring
 from mmpy_bot.wrappers import EventWrapper
+from mmpy_bot.function import (
+    DialogSubmitFunction,
+    DialogUpdateElementFunction,
+    Function,
+    MessageFunction,
+    WebHookFunction,
+)
 
 log = logging.getLogger("mmpy.plugin_base")
 
@@ -179,6 +185,8 @@ class PluginManager:
                     elif isinstance(function, WebHookFunction):
                         self.webhook_listeners[function.matcher].append(function)
                     elif isinstance(function, DialogSubmitFunction):
+                        self.webhook_listeners[function.matcher].append(function)
+                    elif isinstance(function, DialogUpdateElementFunction):
                         self.webhook_listeners[function.matcher].append(function)
                     else:
                         raise TypeError(
