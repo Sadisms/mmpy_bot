@@ -301,7 +301,24 @@ class DialogUpdateElementFunction(Function):
         super().__init__(*args, **kwargs)
 
     def __call__(self, event: DialogEvent):
-        self.function(self.plugin, event)
+        # Signal the WebHookServer that we won't be sending a response.
+        def ensure_response(*args):
+            if not event.responded:
+                self.plugin.driver.respond_to_web(event, NoResponse)
+
+        # If this is a coroutine, wrap it in a task with ensure_response as callback
+        if self.is_coroutine:
+            task = asyncio.create_task(self.function(self.plugin, event))
+            task.add_done_callback(ensure_response)
+            return task
+
+        # If not, simply call both of these functions
+        try:
+            self.function(self.plugin, event)
+        except Exception:
+            log.exception("Exception occurred: ")
+        finally:
+            return ensure_response()
 
 
 def listen_update_dialog_ellemnt(
@@ -332,7 +349,24 @@ class DialogSubmitFunction(Function):
         super().__init__(*args, **kwargs)
 
     def __call__(self, event: DialogEvent):
-        self.function(self.plugin, event)
+        # Signal the WebHookServer that we won't be sending a response.
+        def ensure_response(*args):
+            if not event.responded:
+                self.plugin.driver.respond_to_web(event, NoResponse)
+
+        # If this is a coroutine, wrap it in a task with ensure_response as callback
+        if self.is_coroutine:
+            task = asyncio.create_task(self.function(self.plugin, event))
+            task.add_done_callback(ensure_response)
+            return task
+
+        # If not, simply call both of these functions
+        try:
+            self.function(self.plugin, event)
+        except Exception:
+            log.exception("Exception occurred: ")
+        finally:
+            return ensure_response()
 
 
 def listen_submit_dialog(

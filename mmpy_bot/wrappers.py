@@ -142,17 +142,17 @@ class ActionEvent(WebHookEvent):
         return self.body.get("user_name")
 
 
-class DialogEvent(EventWrapper):
+class DialogEvent(WebHookEvent):
     """Wrapper around an incoming dialog event."""
 
     def __init__(
         self,
         *args,
         webhook_id: str,
+        request_id: str,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
-        self.webhook_id = webhook_id
+        super().__init__(*args, request_id=request_id, webhook_id=webhook_id, **kwargs)
         
     @cached_property
     def dialog_id(self):
