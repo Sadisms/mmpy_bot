@@ -1,3 +1,3 @@
 click>=7.0
-mattermostautodriver @ git+https://github.com/embl-bio-it/python-mattermost-autodriver@v2.3.0
+mattermostautodriver~=2.3.0
 schedule>=0.6.0
