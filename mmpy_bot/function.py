@@ -12,7 +12,7 @@ import click
 
 from mmpy_bot.utils import completed_future
 from mmpy_bot.webhook_server import NoResponse
-from mmpy_bot.wrappers import Message, WebHookEvent
+from mmpy_bot.wrappers import DialogEvent, Message, WebHookEvent
 
 if TYPE_CHECKING:
     from mmpy_bot.plugins import Plugin
@@ -285,6 +285,138 @@ def listen_webhook(
             **metadata,
         )
 
+        # Preserve docstring
+        new_func.__doc__ = func.__doc__
+        return new_func
+
+    return wrapped_func
+
+
+class DialogUpdateElementFunction(Function):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, event: DialogEvent):
+        # If this is a coroutine, handle async response
+        if self.is_coroutine:
+            async def handle_async_response():
+                try:
+                    result = await self.function(self.plugin, event)
+                    if result is not None and not event.responded:
+                        self.plugin.driver.respond_to_web(event, result)
+                    elif not event.responded:
+                        # For dialog update functions, return empty update by default
+                        default_response = {"update": {}}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                except Exception:
+                    log.exception("Exception occurred: ")
+                    if not event.responded:
+                        # For dialog update functions, return empty update by default
+                        default_response = {"update": {}}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                        
+            task = asyncio.create_task(handle_async_response())
+            return task
+
+        # If not, handle sync response
+        try:
+            result = self.function(self.plugin, event)
+            if result is not None and not event.responded:
+                self.plugin.driver.respond_to_web(event, result)
+            elif not event.responded:
+                # For dialog update functions, return empty update by default
+                default_response = {"update": {}}
+                self.plugin.driver.respond_to_web(event, default_response)
+        except Exception:
+            log.exception("Exception occurred: ")
+            if not event.responded:
+                # For dialog update functions, return empty update by default
+                default_response = {"update": {}}
+                self.plugin.driver.respond_to_web(event, default_response)
+
+
+def listen_update_dialog_ellemnt(
+    regexp: str,
+    **metadata,
+):
+    def wrapped_func(func):
+        pattern = re.compile(regexp)
+        new_func = DialogUpdateElementFunction(
+            func,
+            matcher=pattern,
+            **metadata,
+        )
+
+        # Preserve docstring
+        new_func.__doc__ = func.__doc__
+        return new_func
+
+    return wrapped_func
+
+
+class DialogSubmitFunction(Function):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, event: DialogEvent):
+        # If this is a coroutine, handle async response
+        if self.is_coroutine:
+            async def handle_async_response():
+                try:
+                    result = await self.function(self.plugin, event)
+                    if result is not None and not event.responded:
+                        self.plugin.driver.respond_to_web(event, result)
+                    elif not event.responded:
+                        # For dialog submit functions, close dialog by default
+                        default_response = {"close": True}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                except Exception:
+                    log.exception("Exception occurred: ")
+                    if not event.responded:
+                        # For dialog submit functions, close dialog by default
+                        default_response = {"close": True}
+                        self.plugin.driver.respond_to_web(event, default_response)
+                        
+            task = asyncio.create_task(handle_async_response())
+            return task
+
+        # If not, handle sync response
+        try:
+            result = self.function(self.plugin, event)
+            if result is not None and not event.responded:
+                self.plugin.driver.respond_to_web(event, result)
+            elif not event.responded:
+                # For dialog submit functions, close dialog by default
+                default_response = {"close": True}
+                self.plugin.driver.respond_to_web(event, default_response)
+        except Exception:
+            log.exception("Exception occurred: ")
+            if not event.responded:
+                # For dialog submit functions, close dialog by default
+                default_response = {"close": True}
+                self.plugin.driver.respond_to_web(event, default_response)
+
+
+def listen_submit_dialog(
+    regexp: str,
+    **metadata,
+):
+    def wrapped_func(func):
+        pattern = re.compile(regexp)
+        new_func = DialogSubmitFunction(
+            func,
+            matcher=pattern,
+            **metadata,
+        )
+        
         # Preserve docstring
         new_func.__doc__ = func.__doc__
         return new_func
