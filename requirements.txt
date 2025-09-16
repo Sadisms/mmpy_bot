@@ -1,3 +1,5 @@
+httpx>=0.27.0,<0.28.0
+aiohttp>=3.9.5
 click>=7.0
 mattermostautodriver~=2.3.0
 schedule>=0.6.0
