@@ -227,3 +227,29 @@ class Driver(mattermostautodriver.Driver):
             files=file_list, data={"channel_id": channel_id}
         )
         return [info["id"] for info in result["file_infos"]]
+
+    def create_custom_dialog(
+        self,
+        dialog_data: Dict,
+        plugin_base_url: str
+    ) -> Dict:
+        """Creates a custom dialog for the given user."""
+
+        return self.client.post(
+            plugin_base_url.rstrip("/") + "/dialogs",
+            options=dialog_data
+        )
+
+    def update_custom_dialog(
+        self,
+        dialog_id: str,
+        dialog_data: Dict,
+        plugin_base_url: str
+    ) -> Dict:
+        """Updates a custom dialog for the given user."""
+
+        return self.client.make_request(
+            "PATCH",
+            plugin_base_url.rstrip("/") + f"/dialogs/{dialog_id}",
+            options=dialog_data
+        )

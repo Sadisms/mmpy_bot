@@ -6,7 +6,7 @@ from typing import Optional
 
 from aiohttp import web
 
-from mmpy_bot.wrappers import ActionEvent, WebHookEvent
+from mmpy_bot.wrappers import ActionEvent, DialogEvent, WebHookEvent
 
 
 class NoResponse:
@@ -81,7 +81,8 @@ class WebHookServer:
                     # If this handler already received a response, we can skip this.
                     pass
             except Empty:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(.5)
+
 
     @handle_json_error
     async def process_webhook(self, request: web.Request):
@@ -92,6 +93,14 @@ class WebHookServer:
             event = ActionEvent(
                 data, request_id=data["trigger_id"], webhook_id=webhook_id
             )
+
+        elif "dialog_id" in data:
+            event = DialogEvent(
+                data,
+                request_id=data["dialog_id"],
+                webhook_id=webhook_id,
+            )
+
         else:
             # Generate an ID based on the current time and a random number.
             event = WebHookEvent(
@@ -99,6 +108,7 @@ class WebHookServer:
                 request_id=f"{time.time()}_{random.randint(0, 10000)}",
                 webhook_id=webhook_id,
             )
+
         self.event_queue.put(event)
 
         # Register a Future object that will signal us when a response has arrived,

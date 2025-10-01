@@ -32,6 +32,7 @@ class Bot:
         enable_logging: bool = True,
         log_post: bool = True,
         run_scheduler: bool = False,
+        num_threads: int = 10,
     ):
         self._setup_plugin_manager(plugins)
 
@@ -57,7 +58,7 @@ class Bot:
                 "connect_kw_args": {"ping_interval": None},
             }
         )
-        self.driver.login()
+        self.driver.threadpool.num_workers = num_threads
         self.plugin_manager.initialize(self.driver, self.settings)
         self.event_handler = EventHandler(
             self.driver,
@@ -66,9 +67,6 @@ class Bot:
             log_post=log_post
         )
         self.webhook_server = None
-
-        if self.settings.WEBHOOK_HOST_ENABLED:
-            self._initialize_webhook_server()
 
         self.running = False
 
@@ -118,6 +116,7 @@ class Bot:
 
     def run(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
+        self.driver.login()
         try:
             self.running = True
 
@@ -131,6 +130,7 @@ class Bot:
 
             # Start the webhook server on a separate thread if necessary
             if self.settings.WEBHOOK_HOST_ENABLED:
+                self._initialize_webhook_server()
                 self.driver.threadpool.start_webhook_server_thread(self.webhook_server)
 
             # Trigger "start" methods on every plugin

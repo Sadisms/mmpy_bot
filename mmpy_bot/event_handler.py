@@ -32,9 +32,9 @@ class EventHandler:
 
         self._name_matcher = re.compile(rf"^@?{self.driver.username}[:,]?\s?")
 
-    def start(self):
+    async def start(self):
         # This is blocking, will loop forever
-        self.driver.init_websocket(self._handle_event)
+        await self.driver.init_websocket(self._handle_event)
 
     def _should_ignore(self, message: Message):
         # Ignore message from senders specified in settings, and maybe from ourself
@@ -50,7 +50,8 @@ class EventHandler:
                 event = webhook_queue.get_nowait()
                 await self._handle_webhook(event)
             except queue.Empty:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(.5)
+
 
     async def _handle_event(self, data):
         post = json.loads(data)
