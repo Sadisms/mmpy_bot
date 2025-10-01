@@ -114,9 +114,9 @@ class Bot:
             self.event_handler._check_queue_loop(self.webhook_server.event_queue)
         )
 
-    async def run(self):
+    def run(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
-        await self.driver.login()
+        self.driver.login()
         try:
             self.running = True
 
@@ -137,7 +137,7 @@ class Bot:
             self.plugin_manager.start()
 
             # Start listening for events
-            await self.event_handler.start()
+            self.event_handler.start()
 
         except KeyboardInterrupt as e:
             raise e
