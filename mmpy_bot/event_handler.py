@@ -32,9 +32,9 @@ class EventHandler:
 
         self._name_matcher = re.compile(rf"^@?{self.driver.username}[:,]?\s?")
 
-    async def start(self):
+    def start(self):
         # This is blocking, will loop forever
-        await self.driver.init_websocket(self._handle_event)
+        self.driver.init_websocket(self._handle_event)
 
     def _should_ignore(self, message: Message):
         # Ignore message from senders specified in settings, and maybe from ourself
