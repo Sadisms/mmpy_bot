@@ -116,11 +116,11 @@ class MessageFunction(Function):
             self.name = _function.__qualname__
 
         argspec = list(inspect.signature(_function).parameters.keys())
-        if not argspec[:2] == ["self", "message"]:
+        if len(argspec) < 2 or argspec[:2] != ["self", "message"]:
             raise TypeError(
                 "Any message listener function should at least have the positional"
-                f" arguments `self` and `message`, but function {self.name} has"
-                f" arguments {argspec}."
+                f" arguments `self` and `message` as the first two parameters,"
+                f" but function {self.name} has arguments {argspec}."
             )
 
     def __call__(self, message: Message, *args):
@@ -244,10 +244,11 @@ class WebHookFunction(Function):
         self.name = self.function.__qualname__
 
         argspec = list(inspect.signature(self.function).parameters.keys())
-        if not argspec == ["self", "event"]:
+        if len(argspec) < 2 or argspec[:2] != ["self", "event"]:
             raise TypeError(
-                "A webhook listener function should have exactly two arguments:"
-                f" `self` and `event`, but function {self.name} has arguments {argspec}."
+                "A webhook listener function should at least have the positional"
+                f" arguments `self` and `event` as the first two parameters,"
+                f" but function {self.name} has arguments {argspec}."
             )
 
     def __call__(self, event: WebHookEvent):
