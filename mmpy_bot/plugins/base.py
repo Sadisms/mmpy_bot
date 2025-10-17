@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 from mmpy_bot.driver import Driver
+from mmpy_bot.driver import AsyncDriver
 from mmpy_bot.settings import Settings
 from mmpy_bot.utils import split_docstring
 from mmpy_bot.wrappers import EventWrapper
@@ -32,14 +33,14 @@ class Plugin(ABC):
     """
 
     def __init__(self):
-        self.driver: Optional[Driver] = None
+        self.driver: Optional[Union[Driver, AsyncDriver]] = None
         self.plugin_manager: Optional[PluginManager] = None
         self.settings: Optional[Settings] = None
         self.docstring = self.__doc__ if self.__doc__ != Plugin.__doc__ else None
 
     def initialize(
         self,
-        driver: Driver,
+        driver: Union[Driver, AsyncDriver],
         plugin_manager: PluginManager,
         settings: Settings,
     ):
