@@ -134,6 +134,29 @@ class TestEventHandler:
             # Assert the function was called, so we know the asserts succeeded.
             mocked.assert_called_once()
 
+    @mock.patch("mmpy_bot.driver.Driver.username", new="my_username")
+    def test_emoji_codes_not_truncated(self):
+        """Test that emoji codes like :cactus: are not truncated by the name matcher regex"""
+        driver = Driver()
+        plugin_manager = PluginManager([])
+        settings = Settings()
+        handler = EventHandler(driver, settings, plugin_manager)
+
+        # Simulate a message that starts with an emoji code
+        post_body = create_message(text=":cactus: hello world").body.copy()
+        post_body["data"]["post"] = json.dumps(post_body["data"]["post"])
+        post_body["data"]["mentions"] = json.dumps(post_body["data"]["mentions"])
+
+        # Process the message through _handle_post
+        async def run_test():
+            await handler._handle_post(post_body)
+            # After processing, the message should still have the emoji code intact
+            # Note: _handle_post converts post back to dict
+            final_msg = post_body["data"]["post"]["message"]
+            assert final_msg == ":cactus: hello world", f"Expected ':cactus: hello world', got '{final_msg}'"
+
+        asyncio.run(run_test())
+
     def test_handle_webhook(self):
         # Create an initialized plugin so its listeners are registered
         plugin = WebHookExample()
