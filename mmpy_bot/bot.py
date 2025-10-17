@@ -172,7 +172,6 @@ class Bot:
         await self.driver.login()  # type: ignore[attr-defined]
         try:
             self.running = True
-
             self.driver.threadpool.start()
 
             if self.run_scheduler:
@@ -185,10 +184,11 @@ class Bot:
                 self.driver.threadpool.start_webhook_server_thread(self.webhook_server)
 
             self.plugin_manager.start()
-            self.event_handler.start()
+
+            # Async websocket connect returns coroutine; await until shutdown
+            await self.driver.init_websocket(self.event_handler._handle_event)  # type: ignore[attr-defined]
 
         except KeyboardInterrupt as e:
             raise e
-
         finally:
             self.stop()
