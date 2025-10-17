@@ -253,3 +253,189 @@ class Driver(mattermostautodriver.Driver):
             plugin_base_url.rstrip("/") + f"/dialogs/{dialog_id}",
             options=dialog_data
         )
+
+
+class AsyncDriver(mattermostautodriver.AsyncDriver, Driver):
+    async def login(self, *args, **kwargs):
+        result = await super().login(*args, **kwargs)
+        client = self.client
+        self.user_id = getattr(client, "_userid", getattr(client, "userid", ""))
+        self.username = getattr(
+            client, "_username", getattr(client, "username", "")
+        )
+        return result
+
+    async def create_post(
+        self,
+        channel_id: str,
+        message: str,
+        file_paths: Optional[Sequence[str]] = None,
+        root_id: str = "",
+        props: Optional[Dict] = None,
+        ephemeral_user_id: Optional[str] = None,
+    ):
+        file_paths = file_paths or []
+        props = props or {}
+
+        file_ids = (
+            await self.upload_files(file_paths, channel_id)
+            if len(file_paths) > 0
+            else []
+        )
+
+        post = dict(
+            channel_id=channel_id,
+            message=message,
+            file_ids=file_ids,
+            root_id=root_id,
+            props=props,
+        )
+
+        if ephemeral_user_id:
+            return await self.posts.create_post_ephemeral(
+                {
+                    "user_id": ephemeral_user_id,
+                    "post": post,
+                }
+            )
+
+        return await self.posts.create_post(post)
+
+    async def get_thread(self, post_id: str):
+        warnings.warn(
+            "get_thread is deprecated. Use get_post_thread instead",
+            DeprecationWarning,
+        )
+        return await self.get_post_thread(post_id)
+
+    async def get_post_thread(self, post_id: str):
+        thread_info = await self.posts.get_post_thread(post_id)
+        id_stamps = (
+            (id, int(post["create_at"])) for id, post in thread_info["posts"].items()
+        )
+        sorted_stamps = sorted(id_stamps, key=lambda x: x[-1])
+        thread_info["order"] = [id for id, stamp in sorted_stamps]
+        return thread_info
+
+    async def get_user_info(self, user_id: str):
+        return await self.users.get_user(user_id)
+
+    async def react_to(self, message: Message, emoji_name: str):
+        return await self.reactions.save_reaction(
+            {
+                "user_id": self.user_id,
+                "post_id": message.id,
+                "emoji_name": emoji_name,
+            }
+        )
+
+    async def reply_to(
+        self,
+        message: Message,
+        response: str,
+        file_paths: Optional[Sequence[str]] = None,
+        props: Optional[Dict] = None,
+        ephemeral: bool = False,
+        direct: bool = False,
+    ):
+        file_paths = file_paths or []
+        props = props or {}
+
+        if direct and not message.is_direct_message:
+            direct_args = dict(
+                receiver_id=message.user_id,
+                message=response,
+                file_paths=file_paths,
+                props=props,
+                ephemeral_user_id=message.user_id if ephemeral else None,
+            )
+            return await self.direct_message(**direct_args)
+
+        reply_args = dict(
+            channel_id=message.channel_id,
+            message=response,
+            root_id=message.reply_id,
+            file_paths=file_paths,
+            props=props,
+            ephemeral_user_id=message.user_id if ephemeral else None,
+        )
+        return await self.create_post(**reply_args)
+
+    async def get_direct_channel(self, receiver_id: str) -> str:
+        cached = self._direct_channel_cache.get(receiver_id)
+        if cached:
+            return cached
+        channel_id = (await self.channels.create_direct_channel([self.user_id, receiver_id]))[
+            "id"
+        ]
+        self._direct_channel_cache[receiver_id] = channel_id
+        return channel_id
+
+    async def direct_message(
+        self,
+        receiver_id: str,
+        message: str,
+        file_paths: Optional[Sequence[str]] = None,
+        root_id: str = "",
+        props: Optional[Dict] = None,
+        ephemeral_user_id: Optional[str] = None,
+    ):
+        props = props or {}
+        direct_id = (
+            await self.channels.create_direct_channel([self.user_id, receiver_id])
+        )["id"]
+        return await self.create_post(
+            channel_id=direct_id,
+            message=message,
+            root_id=root_id,
+            file_paths=file_paths,
+            props=props,
+            ephemeral_user_id=ephemeral_user_id,
+        )
+
+    async def trigger_own_webhook(self, webhook_id: str, data: Dict):
+        if not self.webhook_url:
+            raise ValueError("The Driver is not aware of any running webhook server!")
+        async with ClientSession() as session:
+            return await session.post(
+                f"{self.webhook_url}/{webhook_id}",
+                json=data,
+            )
+
+    async def upload_files(
+        self, file_paths: Sequence[Union[str, Path]], channel_id: str
+    ) -> List[str]:
+        file_list = [
+            (
+                "files",
+                (
+                    Path(path).name,
+                    Path(path).read_bytes(),
+                ),
+            )
+            for path in file_paths
+        ]
+        result = await self.files.upload_file(files=file_list, data={"channel_id": channel_id})
+        return [info["id"] for info in result["file_infos"]]
+
+    async def create_custom_dialog(
+        self,
+        dialog_data: Dict,
+        plugin_base_url: str,
+    ) -> Dict:
+        return await self.client.post(
+            plugin_base_url.rstrip("/") + "/dialogs",
+            options=dialog_data,
+        )
+
+    async def update_custom_dialog(
+        self,
+        dialog_id: str,
+        dialog_data: Dict,
+        plugin_base_url: str,
+    ) -> Dict:
+        return await self.client.make_request(
+            "PATCH",
+            plugin_base_url.rstrip("/") + f"/dialogs/{dialog_id}",
+            options=dialog_data,
+        )

@@ -3,7 +3,7 @@ import logging
 import sys
 from typing import List, Optional, Union
 
-from mmpy_bot.driver import Driver
+from mmpy_bot.driver import Driver, AsyncDriver
 from mmpy_bot.event_handler import EventHandler
 from mmpy_bot.plugins import (
     ExamplePlugin,
@@ -33,6 +33,7 @@ class Bot:
         log_post: bool = True,
         run_scheduler: bool = False,
         num_threads: int = 10,
+        async_mode: bool = False,
     ):
         self._setup_plugin_manager(plugins)
 
@@ -46,7 +47,9 @@ class Bot:
         if enable_logging:
             self._register_logger()
 
-        self.driver = Driver(
+        self.async_mode = async_mode
+        driver_cls = AsyncDriver if self.async_mode else Driver
+        self.driver = driver_cls(
             {
                 "url": self.settings.MATTERMOST_URL,
                 "port": self.settings.MATTERMOST_PORT,
@@ -69,6 +72,9 @@ class Bot:
         self.webhook_server = None
 
         self.running = False
+
+        # Dynamically bind run implementation
+        self.run = self._run_async if self.async_mode else self._run_sync
 
     def _setup_plugin_manager(self, plugins):
         if plugins is None:
@@ -114,7 +120,7 @@ class Bot:
             self.event_handler._check_queue_loop(self.webhook_server.event_queue)
         )
 
-    def run(self):
+    def _run_sync(self):
         log.info(f"Starting bot {self.__class__.__name__}.")
         self.driver.login()
         try:
@@ -159,3 +165,30 @@ class Bot:
         # Stop the threadpool
         self.driver.threadpool.stop()
         self.running = False
+
+    async def _run_async(self):
+        log.info(f"Starting bot {self.__class__.__name__}.")
+        # mypy: AsyncDriver has async login; Driver has sync login, but here async_mode
+        await self.driver.login()  # type: ignore[attr-defined]
+        try:
+            self.running = True
+            self.driver.threadpool.start()
+
+            if self.run_scheduler:
+                self.driver.threadpool.start_scheduler_thread(
+                    self.settings.SCHEDULER_PERIOD
+                )
+
+            if self.settings.WEBHOOK_HOST_ENABLED:
+                self._initialize_webhook_server()
+                self.driver.threadpool.start_webhook_server_thread(self.webhook_server)
+
+            self.plugin_manager.start()
+
+            # Async websocket connect returns coroutine; await until shutdown
+            await self.driver.init_websocket(self.event_handler._handle_event)  # type: ignore[attr-defined]
+
+        except KeyboardInterrupt as e:
+            raise e
+        finally:
+            self.stop()

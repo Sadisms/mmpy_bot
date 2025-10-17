@@ -29,8 +29,13 @@ class EventHandler:
         self.settings = settings
         self.ignore_own_messages = ignore_own_messages
         self.plugin_manager = plugin_manager
+        self._compiled_name_matcher = None
 
-        self._name_matcher = re.compile(rf"^@?{self.driver.username}[:,]?\s?")
+    @property
+    def _name_matcher(self):
+        if self._compiled_name_matcher is None:
+            self._compiled_name_matcher = re.compile(rf"^@?{self.driver.username}[:,]?\s?")
+        return self._compiled_name_matcher
 
     def start(self):
         # This is blocking, will loop forever
