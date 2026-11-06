@@ -109,6 +109,10 @@ class Bot:
             )
             logging.getLogger("").addHandler(self.console)
 
+    def _log_start(self):
+        server_url = f"{self.settings.SCHEME}://{self.settings.MATTERMOST_URL}"
+        log.info(f"Starting bot {self.driver.username} in {server_url}.")
+
     def _initialize_webhook_server(self):
         self.webhook_server = WebHookServer(
             url=self.settings.WEBHOOK_HOST_URL, port=self.settings.WEBHOOK_HOST_PORT
@@ -121,8 +125,8 @@ class Bot:
         )
 
     def _run_sync(self):
-        log.info(f"Starting bot {self.__class__.__name__}.")
         self.driver.login()
+        self._log_start()
         try:
             self.running = True
 
@@ -167,9 +171,9 @@ class Bot:
         self.running = False
 
     async def _run_async(self):
-        log.info(f"Starting bot {self.__class__.__name__}.")
         # mypy: AsyncDriver has async login; Driver has sync login, but here async_mode
         await self.driver.login()  # type: ignore[attr-defined]
+        self._log_start()
         try:
             self.running = True
             self.driver.threadpool.start()
